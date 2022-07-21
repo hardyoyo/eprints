@@ -1,0 +1,71 @@
+name: eprints
+services:
+
+  appserver:
+    type: apache
+    build_as_root:
+      - apt-get -y update && apt-get install -y perl libncurses5 libselinux1 libsepol1 build-essential libapache2-mod-perl2 libxml-libxml-perl libcgi-pm-perl libunicode-string-perl libterm-readkey-perl libmime-lite-perl libmime-types-perl libxml-libxslt-perl libdigest-sha-perl libdbd-mysql-perl libxml-parser-perl libxml2-dev libxml-twig-perl libarchive-any-perl libjson-perl lynx wget ghostscript xpdf antiword elinks pdftk texlive-base texlive-base-bin psutils imagemagick adduser default-mysql-client unzip libsearch-xapian-perl libtex-encode-perl libio-string-perl
+      - ln -s /app /opt/eprints3
+    webroot: .
+    # config:
+    #   server: config/httpd.conf
+    #   vhosts: config/default.conf
+
+  # database.eprints.internal
+  database:
+    config: {}
+    authentication: mysql_native_password
+    type: mysql
+    portforward: true
+    creds:
+      user: eprints
+      password: eprints
+      database: eprints
+tooling:
+  db-import <file>:
+    service: ':host'
+    description: Imports a dump file into a database service
+    cmd: /helpers/sql-import.sh
+    user: root
+    options:
+      host:
+        description: The database service to use
+        default: database
+        alias:
+          - h
+      no-wipe:
+        description: Do not destroy the existing database before an import
+        boolean: true
+  'db-export [file]':
+    service: ':host'
+    description: Exports database from a database service to a file
+    cmd: /helpers/sql-export.sh
+    user: root
+    options:
+      host:
+        description: The database service to use
+        default: database
+        alias:
+          - h
+      stdout:
+        description: Dump database to stdout
+  mysql:
+    service: ':host'
+    description: Drops into a MySQL shell on a database service
+    cmd: mysql -uroot
+    options:
+      host:
+        description: The database service to use
+        default: database
+        alias:
+          - h
+  perl:
+    service: appserver
+    description: Run Perl commands on the appserver
+    cmd: perl
+
+  epadmin:
+    service: appserver
+    description: Run Epadmin commands on the appserver
+    cmd: bin/epadmin
+    dir: /app
